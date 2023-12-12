@@ -4,7 +4,8 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import argparse
 import yaml
-import json
+import time
+from datetime import datetime
 
 
 class MySpotify(spotipy.Spotify):
@@ -35,7 +36,6 @@ class MySpotify(spotipy.Spotify):
                 print(f"{playlist_id}: {playlist_name}")
                 f.write(f"{playlist_id}: {playlist_name}\n")
 
-
     def get_one_playlist_item(self, playlist_id):
         tracks = []
         offset = 0
@@ -45,64 +45,55 @@ class MySpotify(spotipy.Spotify):
         while True:
             response = self.playlist_tracks(playlist_id, limit=limit, offset=offset, fields=fields)
             for i in response['items']:
-                
-                # for artist
-                row = {
-                    'playlist_id': playlist_id,
-                    'playlist_name': f'"{playlist_name}"',
-                    'added_at': i['added_at'].replace('T', '_').replace('Z', ''),
-                    'track_id': i['track']['id'],
-                    'title': f'"{i['track']['name']}"',
-                    'disc_number': i['track']['disc_number'],
-                    'track_number': i['track']['track_number'],
-                    'is_local': i['track']['is_local'],
-                    'album_id': i['track']['album']['id'],
-                    'album_title': f'"{i['track']['album']['name']}"',
-                    'artist_id': f'"{", ".join(val['id'] for val in i['track']['artists'])}"',
-                    'artist_name': f'"{", ".join(val['name'] for val in i['track']['artists'])}"'
-                }
-
-
-# import csv
-
-# json_data = [
-#     {"Name": "John", "Age": 30, "City": "New York"},
-#     {"Name": "Alice", "Age": 25, "City": "San Francisco"},
-#     {"Name": "Bob", "Age": 35, "City": "Los Angeles"}
-# ]
-
-# # Specify the CSV file path
-# csv_file_path = 'output.csv'
-
-# # Get the header from the first dictionary in the list
-# header = json_data[0].keys()
-
-# # Open the CSV file in write mode
-# with open(csv_file_path, 'w', newline='') as csv_file:
-#     # Create a CSV writer
-#     csv_writer = csv.DictWriter(csv_file, fieldnames=header)
-
-#     # Write the header
-#     csv_writer.writeheader()
-
-#     # Write the data
-#     csv_writer.writerows(json_data)
-
-# print(f"CSV file '{csv_file_path}' has been created.")
-
-
-
-
+                if i['track']['id'] is None:
+                    continue
+                row = [
+                    playlist_id,
+                    f'"{playlist_name}"',
+                    i['added_at'].replace('T', '_').replace('Z', ''),
+                    i['track']['id'],
+                    f'"{i['track']['name']}"',
+                    f'{i['track']['disc_number']}',
+                    f'{i['track']['track_number']}',
+                    f'{i['track']['is_local']}',
+                    i['track']['album']['id'],
+                    f'"{i['track']['album']['name']}"',
+                    f'"{", ".join(val['id'] for val in i['track']['artists'])}"',
+                    f'"{", ".join(val['name'] for val in i['track']['artists'])}"'
+                ]
+                tracks.append(row)
             offset += limit
             # If there are no more tracks to fetch, break the loop
             if len(response['items']) < limit:
                 break
-
+        return tracks
 
     def get_playlist_items(self, playlists):
+        tracks = [[
+            'playlist_id',
+            'playlist_name',
+            'added_at',
+            'track_id',
+            'title',
+            'disc_number',
+            'track_number',
+            'is_local',
+            'album_id',
+            'album_title',
+            'artist_id',
+            'artist_name'
+            ]]
+
         for pl in playlists:
-            playlist_items = self.get_one_playlist_item(pl)
-            print(f'{playlist_items}')
+            print(f'Fetching {pl}')
+            tracks.extend(self.get_one_playlist_item(pl))
+
+        timestamp = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
+        filename = f'playlist_export_{timestamp}.csv' 
+        print(f'All playlists processed, writing {filename}')
+        with open(filename, 'w', encoding='utf-8') as f:
+            for row in tracks:
+                f.write(f"{','.join(row)}\n")
 
 
 def get_configuration():
