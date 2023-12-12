@@ -36,27 +36,64 @@ class MySpotify(spotipy.Spotify):
                 f.write(f"{playlist_id}: {playlist_name}\n")
 
 
-    def get_one_playlist_item(self, playlist):
+    def get_one_playlist_item(self, playlist_id):
         tracks = []
         offset = 0
         limit = 50
         fields = 'items(added_at, track(id, name, disc_number, track_number, is_local, album(id, name), artists(id, name)))'
+        playlist_name = self.playlist(playlist_id)['name']
         while True:
-            response = self.playlist_tracks(playlist, limit=limit, offset=offset, fields=fields)
+            response = self.playlist_tracks(playlist_id, limit=limit, offset=offset, fields=fields)
+            for i in response['items']:
+                
+                # for artist
+                row = {
+                    'playlist_id': playlist_id,
+                    'playlist_name': f'"{playlist_name}"',
+                    'added_at': i['added_at'].replace('T', '_').replace('Z', ''),
+                    'track_id': i['track']['id'],
+                    'title': f'"{i['track']['name']}"',
+                    'disc_number': i['track']['disc_number'],
+                    'track_number': i['track']['track_number'],
+                    'is_local': i['track']['is_local'],
+                    'album_id': i['track']['album']['id'],
+                    'album_title': f'"{i['track']['album']['name']}"',
+                    'artist_id': f'"{", ".join(val['id'] for val in i['track']['artists'])}"',
+                    'artist_name': f'"{", ".join(val['name'] for val in i['track']['artists'])}"'
+                }
+
+
+# import csv
+
+# json_data = [
+#     {"Name": "John", "Age": 30, "City": "New York"},
+#     {"Name": "Alice", "Age": 25, "City": "San Francisco"},
+#     {"Name": "Bob", "Age": 35, "City": "Los Angeles"}
+# ]
+
+# # Specify the CSV file path
+# csv_file_path = 'output.csv'
+
+# # Get the header from the first dictionary in the list
+# header = json_data[0].keys()
+
+# # Open the CSV file in write mode
+# with open(csv_file_path, 'w', newline='') as csv_file:
+#     # Create a CSV writer
+#     csv_writer = csv.DictWriter(csv_file, fieldnames=header)
+
+#     # Write the header
+#     csv_writer.writeheader()
+
+#     # Write the data
+#     csv_writer.writerows(json_data)
+
+# print(f"CSV file '{csv_file_path}' has been created.")
 
 
 
 
-
-            print(f'{json.dumps(response)}')
-            # tracks.extend(response['items'])
-            # offset += limit
-            # print(f'{tracks}')
-            sys.exit(0)
-
-
-
-
+            offset += limit
             # If there are no more tracks to fetch, break the loop
             if len(response['items']) < limit:
                 break
