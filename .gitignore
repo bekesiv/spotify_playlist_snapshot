@@ -1,5 +1,6 @@
 # Use defined
-ecalc.conf
+configuration.yaml
+playlist.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

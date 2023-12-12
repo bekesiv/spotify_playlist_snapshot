@@ -1,57 +1,105 @@
+import sys
+import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import argparse
+import yaml
+import json
 
-# Replace these values with your own Spotify API credentials
-REDIRECT_URI = "http://localhost:8000"
 
-# Define the scope (permissions) for the Spotify API
-SCOPE = "playlist-read-private playlist-read-collaborative"
+class MySpotify(spotipy.Spotify):
+    def __init__(self, client_id, secret):
+        REDIRECT_URI = "http://localhost:8000"
+        SCOPE = "playlist-read-private playlist-read-collaborative"
+        self.sp = super().__init__(auth_manager=SpotifyOAuth(client_id=client_id,
+                                                             client_secret=secret,
+                                                             redirect_uri=REDIRECT_URI,
+                                                             scope=SCOPE))
 
-# Initialize the Spotify client with OAuth authentication
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=CLIENT_ID,
-                                               client_secret=CLIENT_SECRET,
-                                               redirect_uri=REDIRECT_URI,
-                                               scope=SCOPE))
+    def get_all_playlists(self):
+        playlists = []
+        offset = 0
+        limit = 50
+        while True:
+            response = self.current_user_playlists(limit=limit, offset=offset)
+            playlists.extend(response['items'])
+            offset += limit
+            # If there are no more playlists to fetch, break the loop
+            if len(response['items']) < limit:
+                break
+        print("Your playlists:")
+        with open('playlist.txt', 'w', encoding='utf-8') as f:
+            for playlist in playlists:
+                playlist_id = playlist['id']
+                playlist_name = playlist['name']
+                print(f"{playlist_id}: {playlist_name}")
+                f.write(f"{playlist_id}: {playlist_name}\n")
 
-# Get all user playlists (including more than 50) with IDs
-def get_all_user_playlists():
-    playlists = []
-    offset = 0
-    limit = 50
 
-    while True:
-        response = sp.current_user_playlists(limit=limit, offset=offset)
-        playlists.extend(response['items'])
-        offset += limit
+    def get_one_playlist_item(self, playlist):
+        tracks = []
+        offset = 0
+        limit = 50
+        fields = 'items(added_at, track(id, name, disc_number, track_number, is_local, album(id, name), artists(id, name)))'
+        while True:
+            response = self.playlist_tracks(playlist, limit=limit, offset=offset, fields=fields)
 
-        # If there are no more playlists to fetch, break the loop
-        if len(response['items']) < limit:
-            break
 
-    return playlists
 
-# Print playlist details (ID and name)
-def print_user_playlists(playlists):
-    print("Your playlists:")
-    for playlist in playlists:
-        playlist_id = playlist['id']
-        playlist_name = playlist['name']
-        print(f"{playlist_id}: {playlist_name}")
 
+
+            print(f'{json.dumps(response)}')
+            # tracks.extend(response['items'])
+            # offset += limit
+            # print(f'{tracks}')
+            sys.exit(0)
+
+
+
+
+            # If there are no more tracks to fetch, break the loop
+            if len(response['items']) < limit:
+                break
+
+
+    def get_playlist_items(self, playlists):
+        for pl in playlists:
+            playlist_items = self.get_one_playlist_item(pl)
+            print(f'{playlist_items}')
+
+
+def get_configuration():
+    CONFIG_FILENAME = 'configuration.yaml'
+    data = {}
+    if os.path.exists(CONFIG_FILENAME):
+        with open(CONFIG_FILENAME, 'r') as f:
+            data = yaml.safe_load(f)
+    return (data.get('client_id', ''), data.get('secret', ''), data.get('playlists', []))
 
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--id', required=True, help='Customer ID to Spotify Web API')
     parser.add_argument('-s', '--secret', required=True, help='Secret to Spotify Web API')
-    parser.add_argument('-l', '--playlist', required=True, help='One or more playlist to retrieve')
+    parser.add_argument('-l', '--playlists', nargs='+', help='One or more playlist to retrieve')
     return parser.parse_args()
 
 # Main function
 def main():
-    arg = get_arguments()
-    playlists = get_all_user_playlists()
-    print_user_playlists(playlists)
+    (client_id, secret, playlists) = get_configuration()
+    if not client_id or not secret:
+        try:
+            arg = get_arguments()
+            client_id = arg.id
+            secret = arg.secret
+            playlists = arg.playlists
+        except:
+            sys.exit(1)
+    msp = MySpotify(client_id, secret)
+    if not playlists:
+        msp.get_all_playlists()
+        sys.exit(0)
+    else:
+        msp.get_playlist_items(playlists)
 
 if __name__ == "__main__":
     main()
