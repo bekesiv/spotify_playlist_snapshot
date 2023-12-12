@@ -17,6 +17,7 @@ class MySpotify(spotipy.Spotify):
                                                              redirect_uri=REDIRECT_URI,
                                                              scope=SCOPE))
 
+
     def get_all_playlists(self):
         playlists = []
         offset = 0
@@ -35,6 +36,7 @@ class MySpotify(spotipy.Spotify):
                 playlist_name = playlist['name']
                 print(f"{playlist_id}: {playlist_name}")
                 f.write(f"{playlist_id}: {playlist_name}\n")
+
 
     def get_one_playlist_item(self, playlist_id):
         tracks = []
@@ -68,6 +70,7 @@ class MySpotify(spotipy.Spotify):
                 break
         return tracks
 
+
     def get_playlist_items(self, playlists):
         tracks = [[
             'playlist_id',
@@ -87,7 +90,6 @@ class MySpotify(spotipy.Spotify):
         for pl in playlists:
             print(f'Fetching {pl}')
             tracks.extend(self.get_one_playlist_item(pl))
-
         timestamp = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
         filename = f'playlist_export_{timestamp}.csv' 
         print(f'All playlists processed, writing {filename}')
@@ -104,12 +106,14 @@ def get_configuration():
             data = yaml.safe_load(f)
     return (data.get('client_id', ''), data.get('secret', ''), data.get('playlists', []))
 
+
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--id', required=True, help='Customer ID to Spotify Web API')
     parser.add_argument('-s', '--secret', required=True, help='Secret to Spotify Web API')
     parser.add_argument('-l', '--playlists', nargs='+', help='One or more playlist to retrieve')
     return parser.parse_args()
+
 
 # Main function
 def main():
