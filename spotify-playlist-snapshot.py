@@ -16,6 +16,15 @@ class MySpotify(spotipy.Spotify):
                                                              client_secret=secret,
                                                              redirect_uri=REDIRECT_URI,
                                                              scope=SCOPE))
+        self.playlistmap = {}
+
+
+    def get_playlist_name_by_id(self, playlist_id):
+        name = self.playlistmap.get(playlist_id)
+        if name is None:
+            name = self.playlist(playlist_id)['name']
+            self.playlistmap[playlist_id] = name
+        return name
 
 
     def get_all_playlists(self):
@@ -32,22 +41,24 @@ class MySpotify(spotipy.Spotify):
         print("Your playlists:")
         with open('playlist.txt', 'w', encoding='utf-8') as f:
             for playlist in playlists:
-                playlist_id = playlist['id']
-                playlist_name = playlist['name']
-                print(f"{playlist_id}: {playlist_name}")
-                f.write(f"{playlist_id}: {playlist_name}\n")
+                self.playlistmap[playlist['id']] = playlist['name']
+                print(f"{playlist['id']}: {playlist['name']}")
+                sys.stdout.flush()
+                f.write(f"{playlist['id']}: {playlist['name']}\n")
+        return playlists
 
 
-    def get_one_playlist_item(self, playlist_id):
+    def get_tracks_in_one_playlist(self, playlist_id, playlist_name):
         tracks = []
         offset = 0
         limit = 50
         fields = 'items(added_at, track(id, name, disc_number, track_number, is_local, album(id, name), artists(id, name)))'
-        playlist_name = self.playlist(playlist_id)['name']
         while True:
             response = self.playlist_tracks(playlist_id, limit=limit, offset=offset, fields=fields)
             for i in response['items']:
-                if i['track']['id'] is None:
+                # print(f'{response['items']}')
+                sys.stdout.flush()
+                if i.get('track', {}).get('id') is None:
                     continue
                 row = [
                     playlist_id,
@@ -71,8 +82,8 @@ class MySpotify(spotipy.Spotify):
         return tracks
 
 
-    def get_playlist_items(self, playlists):
-        tracks = [[
+    def get_playlist_items(self, playlists, excludes):
+        header = [
             'playlist_id',
             'playlist_name',
             'added_at',
@@ -85,18 +96,25 @@ class MySpotify(spotipy.Spotify):
             'album_title',
             'artist_id',
             'artist_name'
-            ]]
-
-        for pl in playlists:
-            print(f'Fetching {pl}')
-            tracks.extend(self.get_one_playlist_item(pl))
+            ]
         timestamp = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-        filename = f'playlist_export_{timestamp}.csv' 
-        print(f'All playlists processed, writing {filename}')
+        filename = f'playlist_export_{timestamp}.csv'
         with open(filename, 'w', encoding='utf-8') as f:
-            for row in tracks:
-                f.write(f"{','.join(row)}\n")
-
+            f.write(f"{','.join(header)}\n")
+        for playlist_id in playlists:
+            playlist_name = self.get_playlist_name_by_id(playlist_id)
+            if playlist_id in excludes:
+                print(f'!! Skipping {playlist_id} - {playlist_name}')
+                sys.stdout.flush()
+                continue
+            print(f'Fetching {playlist_id}: {playlist_name}')
+            sys.stdout.flush()
+            tracks = self.get_tracks_in_one_playlist(playlist_id, playlist_name)
+            with open(filename, 'a', encoding='utf-8') as f:
+                for row in tracks:
+                    f.write(f"{','.join(row)}\n")
+        print(f'All playlists processed, writing {filename}')
+        
 
 def get_configuration():
     CONFIG_FILENAME = 'configuration.yaml'
@@ -104,7 +122,7 @@ def get_configuration():
     if os.path.exists(CONFIG_FILENAME):
         with open(CONFIG_FILENAME, 'r') as f:
             data = yaml.safe_load(f)
-    return (data.get('client_id', ''), data.get('secret', ''), data.get('playlists', []))
+    return (data.get('client_id', ''), data.get('secret', ''), data.get('playlists', []), data.get('exclude', []))
 
 
 def get_arguments():
@@ -112,26 +130,26 @@ def get_arguments():
     parser.add_argument('-i', '--id', required=True, help='Customer ID to Spotify Web API')
     parser.add_argument('-s', '--secret', required=True, help='Secret to Spotify Web API')
     parser.add_argument('-l', '--playlists', nargs='+', help='One or more playlist to retrieve')
+    parser.add_argument('-x', '--excludes', nargs='+', help='One or more playlist to exclude')
     return parser.parse_args()
 
 
 # Main function
 def main():
-    (client_id, secret, playlists) = get_configuration()
+    (client_id, secret, playlists, excludes) = get_configuration()
     if not client_id or not secret:
         try:
             arg = get_arguments()
             client_id = arg.id
             secret = arg.secret
             playlists = arg.playlists
+            excludes = arg.excludes
         except:
             sys.exit(1)
     msp = MySpotify(client_id, secret)
     if not playlists:
-        msp.get_all_playlists()
-        sys.exit(0)
-    else:
-        msp.get_playlist_items(playlists)
+        playlists = [i['id'] for i in msp.get_all_playlists()]
+    msp.get_playlist_items(playlists, excludes)
 
 if __name__ == "__main__":
     main()
