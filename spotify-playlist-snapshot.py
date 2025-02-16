@@ -1,3 +1,5 @@
+
+#!/usr/bin/env python3
 import sys
 import os
 import spotipy
@@ -6,7 +8,6 @@ import argparse
 import yaml
 import time
 from datetime import datetime
-
 
 class MySpotify(spotipy.Spotify):
     def __init__(self, client_id, secret):
@@ -18,14 +19,12 @@ class MySpotify(spotipy.Spotify):
                                                              scope=SCOPE))
         self.playlistmap = {}
 
-
     def get_playlist_name_by_id(self, playlist_id):
         name = self.playlistmap.get(playlist_id)
         if name is None:
-            name = self.playlist(playlist_id)['name']
+            name = self.playlist(playlist_id)["name"]
             self.playlistmap[playlist_id] = name
         return name
-
 
     def get_all_playlists(self):
         playlists = []
@@ -33,20 +32,19 @@ class MySpotify(spotipy.Spotify):
         limit = 50
         while True:
             response = self.current_user_playlists(limit=limit, offset=offset)
-            playlists.extend(response['items'])
+            playlists.extend(response["items"])
             offset += limit
             # If there are no more playlists to fetch, break the loop
-            if len(response['items']) < limit:
+            if len(response["items"]) < limit:
                 break
         print("Your playlists:")
         with open('playlist.txt', 'w', encoding='utf-8') as f:
             for playlist in playlists:
-                self.playlistmap[playlist['id']] = playlist['name']
-                print(f"{playlist['id']}: {playlist['name']}")
+                self.playlistmap[playlist["id"]] = playlist["name"]
+                print(f'{playlist["id"]}: {playlist["name"]}')
                 sys.stdout.flush()
-                f.write(f"{playlist['id']}: {playlist['name']}\n")
+                f.write(f'{playlist["id"]}: {playlist["name"]}\n')
         return playlists
-
 
     def get_tracks_in_one_playlist(self, playlist_id, playlist_name):
         tracks = []
@@ -55,32 +53,31 @@ class MySpotify(spotipy.Spotify):
         fields = 'items(added_at, track(id, name, disc_number, track_number, is_local, album(id, name), artists(id, name)))'
         while True:
             response = self.playlist_tracks(playlist_id, limit=limit, offset=offset, fields=fields)
-            for i in response['items']:
-                # print(f'{response['items']}')
+            for i in response["items"]:
+                # print(f'{response["items"]}')
                 sys.stdout.flush()
                 if i.get('track', {}).get('id') is None:
                     continue
                 row = [
                     playlist_id,
                     f'"{playlist_name}"',
-                    i['added_at'].replace('T', '_').replace('Z', ''),
-                    i['track']['id'],
-                    f'"{i['track']['name']}"',
-                    f'{i['track']['disc_number']}',
-                    f'{i['track']['track_number']}',
-                    f'{i['track']['is_local']}',
-                    i['track']['album']['id'],
-                    f'"{i['track']['album']['name']}"',
-                    f'"{", ".join(val['id'] for val in i['track']['artists'])}"',
-                    f'"{", ".join(val['name'] for val in i['track']['artists'])}"'
+                    i["added_at"].replace('T', '_').replace('Z', ''),
+                    i["track"]["id"],
+                    f'"{i["track"]["name"]}"',
+                    f'{i["track"]["disc_number"]}',
+                    f'{i["track"]["track_number"]}',
+                    f'{i["track"]["is_local"]}',
+                    i["track"]["album"]["id"],
+                    f'"{i["track"]["album"]["name"]}"',
+                    f'"{", ".join(val["id"] for val in i["track"]["artists"])}"',
+                    f'"{", ".join(val["name"] for val in i["track"]["artists"])}"'
                 ]
                 tracks.append(row)
             offset += limit
             # If there are no more tracks to fetch, break the loop
-            if len(response['items']) < limit:
+            if len(response["items"]) < limit:
                 break
         return tracks
-
 
     def get_playlist_items(self, playlists, excludes):
         header = [
@@ -114,7 +111,6 @@ class MySpotify(spotipy.Spotify):
                 for row in tracks:
                     f.write(f"{','.join(row)}\n")
         print(f'All playlists processed, writing {filename}')
-        
 
 def get_configuration():
     CONFIG_FILENAME = 'configuration.yaml'
@@ -123,7 +119,6 @@ def get_configuration():
         with open(CONFIG_FILENAME, 'r') as f:
             data = yaml.safe_load(f)
     return (data.get('client_id', ''), data.get('secret', ''), data.get('playlists', []), data.get('exclude', []))
-
 
 def get_arguments():
     parser = argparse.ArgumentParser()
@@ -148,7 +143,7 @@ def main():
             sys.exit(1)
     msp = MySpotify(client_id, secret)
     if not playlists:
-        playlists = [i['id'] for i in msp.get_all_playlists()]
+        playlists = [i["id"] for i in msp.get_all_playlists()]
     msp.get_playlist_items(playlists, excludes)
 
 if __name__ == "__main__":
