@@ -5,6 +5,7 @@ import os
 import argparse
 import time
 from datetime import datetime
+from typing import List, Tuple, Dict, Any
 import yaml
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -20,7 +21,7 @@ class MySpotify(spotipy.Spotify):
         playlistmap (dict): A dictionary to map playlist IDs to their names.
     """
 
-    def __init__(self, client_id, secret):
+    def __init__(self, client_id: str, secret: str) -> None:
         """
         Initializes the MySpotify class with the given client ID and secret.
 
@@ -34,9 +35,9 @@ class MySpotify(spotipy.Spotify):
                                                    client_secret=secret,
                                                    redirect_uri=REDIRECT_URI,
                                                    scope=SCOPE))
-        self.playlistmap = {}
+        self.playlistmap: Dict[str, str] = {}
 
-    def get_playlist_name_by_id(self, playlist_id):
+    def get_playlist_name_by_id(self, playlist_id: str) -> str:
         """
         Retrieves the name of a playlist by its ID.
 
@@ -52,14 +53,14 @@ class MySpotify(spotipy.Spotify):
             self.playlistmap[playlist_id] = name
         return name
 
-    def get_all_playlists(self):
+    def get_all_playlists(self) -> List[Dict[str, Any]]:
         """
         Retrieves all playlists of the current user and writes them to a file.
 
         Returns:
             list: A list of all playlists.
         """
-        playlists = []
+        playlists: List[Dict[str, Any]] = []
         offset = 0
         limit = 50
         while True:
@@ -78,7 +79,7 @@ class MySpotify(spotipy.Spotify):
                 f.write(f'{playlist["id"]}: {playlist["name"]}\n')
         return playlists
 
-    def get_tracks_in_one_playlist(self, playlist_id, playlist_name):
+    def get_tracks_in_one_playlist(self, playlist_id: str, playlist_name: str) -> List[List[str]]:
         """
         Retrieves all tracks in a given playlist.
 
@@ -89,7 +90,7 @@ class MySpotify(spotipy.Spotify):
         Returns:
             list: A list of tracks in the playlist.
         """
-        tracks = []
+        tracks: List[List[str]] = []
         offset = 0
         limit = 50
         fields = (
@@ -123,7 +124,7 @@ class MySpotify(spotipy.Spotify):
                 break
         return tracks
 
-    def get_playlist_items(self, playlists, excludes):
+    def get_playlist_items(self, playlists: List[str], excludes: List[str]) -> None:
         """
         Retrieves tracks from multiple playlists and writes them to a CSV file.
 
@@ -166,7 +167,7 @@ class MySpotify(spotipy.Spotify):
                     f.write(f"{','.join(row)}\n")
         print(f'All playlists processed, writing {filename}')
 
-def get_configuration():
+def get_configuration() -> Tuple[str, str, List[str], List[str]]:
     """
     Reads the configuration from a YAML file and returns the relevant settings.
 
@@ -185,7 +186,7 @@ def get_configuration():
             - exclude (list): A list of items to be excluded.
     """
     CONFIG_FILENAME = 'configuration.yaml'
-    data = {}
+    data: Dict[str, Any] = {}
     if os.path.exists(CONFIG_FILENAME):
         with open(CONFIG_FILENAME, encoding="utf-8", mode='r') as f:
             data = yaml.safe_load(f)
@@ -194,7 +195,7 @@ def get_configuration():
             data.get('playlists', []),
             data.get('exclude', []))
 
-def get_arguments():
+def get_arguments() -> argparse.Namespace:
     """
     Parses command-line arguments for the Spotify Playlist Snapshot application.
     """
@@ -205,9 +206,7 @@ def get_arguments():
     parser.add_argument('-x', '--excludes', nargs='+', help='One or more playlist to exclude')
     return parser.parse_args()
 
-
-# Main function
-def main():
+def main() -> None:
     """
     Main function to execute the Spotify playlist snapshot process.
 
