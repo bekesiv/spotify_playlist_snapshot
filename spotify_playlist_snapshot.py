@@ -10,7 +10,24 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 class MySpotify(spotipy.Spotify):
+    """
+    A class to interact with Spotify's Web API using Spotipy library.
+
+    Extends the Spotipy.Spotify class and provides additional methods
+    to fetch and manage playlists and their tracks.
+
+    Attributes:
+        playlistmap (dict): A dictionary to map playlist IDs to their names.
+    """
+
     def __init__(self, client_id, secret):
+        """
+        Initializes the MySpotify class with the given client ID and secret.
+
+        Args:
+            client_id (str): The client ID for Spotify API.
+            secret (str): The client secret for Spotify API.
+        """
         REDIRECT_URI = "http://localhost:8000"
         SCOPE = "playlist-read-private playlist-read-collaborative"
         super().__init__(auth_manager=SpotifyOAuth(client_id=client_id,
@@ -20,6 +37,15 @@ class MySpotify(spotipy.Spotify):
         self.playlistmap = {}
 
     def get_playlist_name_by_id(self, playlist_id):
+        """
+        Retrieves the name of a playlist by its ID.
+
+        Args:
+            playlist_id (str): The ID of the playlist.
+
+        Returns:
+            str: The name of the playlist.
+        """
         name = self.playlistmap.get(playlist_id)
         if name is None:
             name = self.playlist(playlist_id)["name"]
@@ -27,6 +53,12 @@ class MySpotify(spotipy.Spotify):
         return name
 
     def get_all_playlists(self):
+        """
+        Retrieves all playlists of the current user and writes them to a file.
+
+        Returns:
+            list: A list of all playlists.
+        """
         playlists = []
         offset = 0
         limit = 50
@@ -47,10 +79,22 @@ class MySpotify(spotipy.Spotify):
         return playlists
 
     def get_tracks_in_one_playlist(self, playlist_id, playlist_name):
+        """
+        Retrieves all tracks in a given playlist.
+
+        Args:
+            playlist_id (str): The ID of the playlist.
+            playlist_name (str): The name of the playlist.
+
+        Returns:
+            list: A list of tracks in the playlist.
+        """
         tracks = []
         offset = 0
         limit = 50
-        fields = 'items(added_at, track(id, name, disc_number, track_number, is_local, album(id, name), artists(id, name)))'
+        fields = (
+            'items(added_at, track(id, name, disc_number, track_number, is_local, album(id, name), artists(id, name)))'
+        )
         while True:
             response = self.playlist_tracks(playlist_id, limit=limit, offset=offset, fields=fields)
             for i in response["items"]:
@@ -80,6 +124,16 @@ class MySpotify(spotipy.Spotify):
         return tracks
 
     def get_playlist_items(self, playlists, excludes):
+        """
+        Retrieves tracks from multiple playlists and writes them to a CSV file.
+
+        Args:
+            playlists (list): A list of playlist IDs to fetch tracks from.
+            excludes (list): A list of playlist IDs to exclude from fetching.
+
+        Returns:
+            None
+        """
         header = [
             'playlist_id',
             'playlist_name',
@@ -113,6 +167,23 @@ class MySpotify(spotipy.Spotify):
         print(f'All playlists processed, writing {filename}')
 
 def get_configuration():
+    """
+    Reads the configuration from a YAML file and returns the relevant settings.
+
+    The configuration file is expected to be named 'configuration.yaml' and should be located
+    in the same directory as this script. The file should contain the following keys:
+    - client_id: The client ID for the Spotify API.
+    - secret: The secret key for the Spotify API.
+    - playlists: A list of playlist IDs to be processed.
+    - exclude: A list of items to be excluded.
+
+    Returns:
+        tuple: A tuple containing the following elements:
+            - client_id (str): The client ID for the Spotify API.
+            - secret (str): The secret key for the Spotify API.
+            - playlists (list): A list of playlist IDs to be processed.
+            - exclude (list): A list of items to be excluded.
+    """
     CONFIG_FILENAME = 'configuration.yaml'
     data = {}
     if os.path.exists(CONFIG_FILENAME):
@@ -124,6 +195,9 @@ def get_configuration():
             data.get('exclude', []))
 
 def get_arguments():
+    """
+    Parses command-line arguments for the Spotify Playlist Snapshot application.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--id', required=True, help='Customer ID to Spotify Web API')
     parser.add_argument('-s', '--secret', required=True, help='Secret to Spotify Web API')
@@ -134,6 +208,18 @@ def get_arguments():
 
 # Main function
 def main():
+    """
+    Main function to execute the Spotify playlist snapshot process.
+
+    This function retrieves the configuration for the Spotify API client,
+    including client ID, secret, playlists, and excludes. If the client ID
+    or secret is not provided, it fetches these values from command-line
+    arguments. It then initializes the MySpotify object and retrieves the
+    playlist items based on the provided or fetched playlists and excludes.
+
+    Returns:
+        None
+    """
     (client_id, secret, playlists, excludes) = get_configuration()
     if not client_id or not secret:
         arg = get_arguments()
