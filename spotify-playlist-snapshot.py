@@ -1,22 +1,22 @@
-
+"""Small script to fetch all playlists information of a Spotify user and save it to a CSV file."""
 #!/usr/bin/env python3
 import sys
 import os
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
 import argparse
-import yaml
 import time
 from datetime import datetime
+import yaml
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 
 class MySpotify(spotipy.Spotify):
     def __init__(self, client_id, secret):
         REDIRECT_URI = "http://localhost:8000"
         SCOPE = "playlist-read-private playlist-read-collaborative"
-        self.sp = super().__init__(auth_manager=SpotifyOAuth(client_id=client_id,
-                                                             client_secret=secret,
-                                                             redirect_uri=REDIRECT_URI,
-                                                             scope=SCOPE))
+        super().__init__(auth_manager=SpotifyOAuth(client_id=client_id,
+                                                   client_secret=secret,
+                                                   redirect_uri=REDIRECT_URI,
+                                                   scope=SCOPE))
         self.playlistmap = {}
 
     def get_playlist_name_by_id(self, playlist_id):
@@ -116,9 +116,12 @@ def get_configuration():
     CONFIG_FILENAME = 'configuration.yaml'
     data = {}
     if os.path.exists(CONFIG_FILENAME):
-        with open(CONFIG_FILENAME, 'r') as f:
+        with open(CONFIG_FILENAME, encoding="utf-8", mode='r') as f:
             data = yaml.safe_load(f)
-    return (data.get('client_id', ''), data.get('secret', ''), data.get('playlists', []), data.get('exclude', []))
+    return (data.get('client_id', ''),
+            data.get('secret', ''),
+            data.get('playlists', []),
+            data.get('exclude', []))
 
 def get_arguments():
     parser = argparse.ArgumentParser()
@@ -133,14 +136,11 @@ def get_arguments():
 def main():
     (client_id, secret, playlists, excludes) = get_configuration()
     if not client_id or not secret:
-        try:
-            arg = get_arguments()
-            client_id = arg.id
-            secret = arg.secret
-            playlists = arg.playlists
-            excludes = arg.excludes
-        except:
-            sys.exit(1)
+        arg = get_arguments()
+        client_id = arg.id
+        secret = arg.secret
+        playlists = arg.playlists
+        excludes = arg.excludes
     msp = MySpotify(client_id, secret)
     if not playlists:
         playlists = [i["id"] for i in msp.get_all_playlists()]
