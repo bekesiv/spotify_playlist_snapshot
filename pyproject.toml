@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "spotify_playlist_snapshot"
+version = "0.1.0"
+description = "A script to fetch all playlists information of a Spotify user and save it to a CSV file."
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+spotipy = "*"
+pyyaml = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
