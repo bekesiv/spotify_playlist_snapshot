@@ -1,0 +1,14 @@
+client_id: <client_id>
+secret: <secret_token>
+# If playlists given, only these will be fetched. If omitted all user playlists will be fetched.
+playlists:
+  # playlist1
+  - playlist1_id
+  # playlist2
+  - playlist2_id
+# These playlists will be excluded from fetching.
+exclude:
+  # playlis3
+  - playlist3_id
+  # playlis4
+  - playlist4_id
